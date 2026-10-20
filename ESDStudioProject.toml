@@ -1,7 +1,0 @@
-title = "ESDStudioProject"
-[project_info]
-name = "MOAL"
-base_directory = "C:\\Users\\joao_\\.Minhas Coisas\\mods\\Mod Making\\ESDStudio\\Projects\\MOAL"
-game_directory = "C:\\Users\\joao_\\.Minhas Coisas\\jogos\\Emulador\\CUSA03173\\dvdroot_ps4"
-mod_directory = "C:\\Users\\joao_\\.Minhas Coisas\\mods\\Mod Making\\.Modding\\BB\\modding\\dvdroot_ps4"
-game = "bb"
