@@ -158,6 +158,17 @@ def talk_result(v):
     return eq(call(F_TALK_LIST_RESULT), v)
 
 
+# Registradores das expressoes: 0xa7 guarda o valor no REG0 (no lugar do 0xa6 depois da
+# chamada), 0xaf le o REG0. Como o jogo faz com TalkListResult no menu das lapides.
+REG0 = b'\xaf'
+
+
+def to_reg0(call_code):
+    if not call_code.endswith(b'\xa6'):
+        raise ValueError('esperava uma chamada de funcao')
+    return call_code[:-1] + b'\xa7'
+
+
 def menu_closed(menu_id):
     return done(eq(call(F_CHECK_MENU_OPEN, menu_id, 0), 0))
 
@@ -288,12 +299,17 @@ def build_travel(s, headstones):
             [('back', closed)] + [(f'list{k}', done(talk_result(k + 1))) for k in range(len(headstones))],
             [WAIT])
     for k, (text, lamps) in enumerate(headstones):
+        # Como as lapides do jogo (t210000.esd, grupo x6): a lista e montada num estado e o
+        # StartWarpMenuInit fica sozinho no seguinte; o resultado e lido uma vez (guardado no
+        # REG0 pela condicao de fechar) e as escolhas comparam o REG0. Com tudo num estado so e
+        # TalkListResult() chamado em cada condicao, escolher uma lapide voltava a lista de lapides.
         entry = [C(C_CLEAR_TALK_LIST_DATA)]
         entry += [C(C_ADD_TALK_LIST_DATA, j + 1, l[3], l[4]) for j, l in enumerate(lamps)]
-        entry += [C(C_START_WARP_MENU_INIT)]
-        wclosed = done(eq(call(F_TALK_LIST_RESULT), 0) + eq(call(F_CHECK_MENU_OPEN, M_WARP, 0), 0) + b'\x99')
-        g.state(f'list{k}', entry, [('start', wclosed)] +
-                [(f'go{l[0]}', done(talk_result(j + 1))) for j, l in enumerate(lamps)], [WAIT])
+        g.state(f'list{k}', entry, [(f'open{k}', TRUE)])
+        wclosed = done(eq(to_reg0(call(F_TALK_LIST_RESULT)), 0) +
+                       eq(call(F_CHECK_MENU_OPEN, M_WARP, 0), 0) + b'\x99')
+        g.state(f'open{k}', [C(C_START_WARP_MENU_INIT)], [('start', wclosed)] +
+                [(f'go{l[0]}', done(eq(REG0, j + 1))) for j, l in enumerate(lamps)], [WAIT])
         for l in lamps:
             d, area, i, _, _, off_text = l
             disabled = done(flag_on(70000000 + area * 10 + i))
